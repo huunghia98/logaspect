@@ -1,0 +1,15 @@
+#IntelliJ IDEA
+.idea/
+*.iml
+
+#Maven
+target/
+target
+
+#Resources
+src/main/resources/app.properties
+*.properties
+*.zip
+
+.directory
+out/
