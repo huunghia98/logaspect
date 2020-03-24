@@ -6,6 +6,9 @@ public class LogPattern {
     public static final String METHOD_START = "METHOD-START";
     public static final String METHOD_FINISH = "METHOD-FINISH";
 
+    public static final String UNKNOWN_BLOCK_START = "UBS";
+    public static final String UNKNOWN_BLOCK_FINISH = "UBF";
+
     // not separate Rule and ClassRule, combine to Rule only.
     // a test class in log start
     public static final String TEST_START = "TEST-START";

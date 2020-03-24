@@ -6,6 +6,7 @@ import org.apache.log4j.WriterAppender;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
+import sun.rmi.runtime.Log;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -35,11 +36,15 @@ public aspect Interceptor {
         && !setUpOnce() && !setUpAll() && !running() && !tearDownOnce() && !tearDownAll()
         && !ruleSetup() && !ruleTearDown());
 
+    pointcut staticInit(): (staticinitialization(*Test));
+
     before(): traceMethods(){
         stackTrace++;
         considerUnFlushImmediate();
         Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
 //        String line =""+ thisJoinPointStaticPart.getSourceLocation().getLine();
+        if (stackTrace == 1)
+            logDebug(method, LogPattern.UNKNOWN_BLOCK_START);
         logDebug(method, LogPattern.METHOD_START);
     }
     after(): traceMethods(){
@@ -48,10 +53,12 @@ public aspect Interceptor {
         Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
 //        String line =""+ thisJoinPointStaticPart.getSourceLocation().getLine();
         logDebug(method, LogPattern.METHOD_FINISH);
+        if (stackTrace == 0)
+            logDebug(method, LogPattern.UNKNOWN_BLOCK_FINISH);
     }
-    after() throwing (Throwable t): traceMethods(){
-        logExceptions(t,thisJoinPoint);
-    }
+//    after() throwing (Throwable t): traceMethods(){
+//        logExceptions(t,thisJoinPoint);
+//    }
 
 
     before(): setUpAll(){
@@ -150,7 +157,6 @@ public aspect Interceptor {
         logDebug(method,LogPattern.RULE_TEARDOWN_FINISH);
     }
 
-
     private void logExceptions(Throwable t, final JoinPoint point) {
         final Method method = ((MethodSignature) point.getSignature()).getMethod();
         String mName = method.getName();
@@ -193,9 +199,12 @@ public aspect Interceptor {
             ar.add(cl.getTypeName());
         }
         String params = String.join(LogPattern.PARAMS_DELIMITER,ar);
-        LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.COMMAND_LOG_MODE), String.join(LogPattern.DELIMITER, message, mName, clazz.getName(), clazz.getSimpleName(),clazz.getCanonicalName(), clazz.getTypeName(),params,t.getName()));
+        LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.COMMAND_LOG_MODE), String.join(LogPattern.DELIMITER, message, mName, clazz.getName(), clazz.getSimpleName(),clazz.getCanonicalName(), clazz.getTypeName(),params,Long.toString(t.getId())));
     }
-
+    private void logDebug(String message){
+        Thread t = Thread.currentThread();
+        LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.COMMAND_LOG_MODE),String.join(LogPattern.DELIMITER, message,Long.toString(t.getId())));
+    }
     private static ArrayList<WriterAppender> getAllWriterAppender(Logger logger){
         ArrayList<WriterAppender> was = new ArrayList<>();
         for (Enumeration aps = logger.getAllAppenders(); aps.hasMoreElements(); ) {
