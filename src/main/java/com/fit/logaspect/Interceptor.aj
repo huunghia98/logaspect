@@ -6,17 +6,25 @@ import org.apache.log4j.WriterAppender;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
-import sun.rmi.runtime.Log;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Enumeration;
 
 public aspect Interceptor {
-    private static final Logger LOGGER = Logger.getLogger(Interceptor.class.getName());
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                ArrayList<WriterAppender> writerAppenders = getAllWriterAppender(LOGGER);
+                for (WriterAppender ap:writerAppenders)
+                    ap.setImmediateFlush(true);
+                // important
+                LOGGER.info("Flush-end-of-log");
+            }
+        });
+    }
+    private static Logger LOGGER = Logger.getLogger(Interceptor.class.getName());
     private static long stackTrace = 0;
-    private static ArrayList<WriterAppender> writerAppenders = getAllWriterAppender(LOGGER);
     private static boolean flushNow = false;
 
     pointcut setUpAll() : (execution(@org.junit.BeforeClass * *(..)) || execution(@org.junit.jupiter.api.BeforeAll * *(..))) ;
@@ -36,25 +44,17 @@ public aspect Interceptor {
         && !setUpOnce() && !setUpAll() && !running() && !tearDownOnce() && !tearDownAll()
         && !ruleSetup() && !ruleTearDown());
 
-    pointcut staticInit(): (staticinitialization(*Test));
-
     before(): traceMethods(){
         stackTrace++;
-        considerUnFlushImmediate();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-//        String line =""+ thisJoinPointStaticPart.getSourceLocation().getLine();
         if (stackTrace == 1)
-            logDebug(method, LogPattern.UNKNOWN_BLOCK_START);
-        logDebug(method, LogPattern.METHOD_START);
+            logDebug(thisJoinPointStaticPart, LogPattern.UNKNOWN_BLOCK_START);
+        logDebug(thisJoinPointStaticPart, LogPattern.METHOD_START);
     }
     after(): traceMethods(){
         stackTrace--;
-        considerFlushBuffer();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-//        String line =""+ thisJoinPointStaticPart.getSourceLocation().getLine();
-        logDebug(method, LogPattern.METHOD_FINISH);
+        logDebug(thisJoinPointStaticPart, LogPattern.METHOD_FINISH);
         if (stackTrace == 0)
-            logDebug(method, LogPattern.UNKNOWN_BLOCK_FINISH);
+            logDebug(thisJoinPointStaticPart, LogPattern.UNKNOWN_BLOCK_FINISH);
     }
 //    after() throwing (Throwable t): traceMethods(){
 //        logExceptions(t,thisJoinPoint);
@@ -63,133 +63,103 @@ public aspect Interceptor {
 
     before(): setUpAll(){
         stackTrace++;
-        considerUnFlushImmediate();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method, LogPattern.TEST_START);
-        logDebug(method, LogPattern.SETUP_START_ALL);
+        logDebug(thisJoinPointStaticPart, LogPattern.SETUP_START_ALL);
     }
     after(): setUpAll(){
         stackTrace--;
-        considerFlushBuffer();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method, LogPattern.SETUP_FINISH_ALL);
+        logDebug(thisJoinPointStaticPart, LogPattern.SETUP_FINISH_ALL);
     }
-
 
     before(): setUpOnce(){
         stackTrace++;
-        considerUnFlushImmediate();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method, LogPattern.SETUP_START_ONE);
+        logDebug(thisJoinPointStaticPart, LogPattern.SETUP_START_ONE);
     }
     after(): setUpOnce(){
         stackTrace--;
-        considerFlushBuffer();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method, LogPattern.SETUP_FINISH_ONE);
+        logDebug(thisJoinPointStaticPart, LogPattern.SETUP_FINISH_ONE);
     }
 
     before(): running(){
         stackTrace++;
-        considerUnFlushImmediate();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method, LogPattern.TESTMETHOD_START);
+        logDebug(thisJoinPointStaticPart, LogPattern.TESTMETHOD_START);
     }
     after(): running(){
         stackTrace--;
-        considerFlushBuffer();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method, LogPattern.TESTMETHOD_FINISH);
+        logDebug(thisJoinPointStaticPart, LogPattern.TESTMETHOD_FINISH);
     }
 
 
     before(): tearDownOnce(){
         stackTrace++;
-        considerUnFlushImmediate();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method, LogPattern.TEARDOWN_START_ONE);
+        logDebug(thisJoinPointStaticPart, LogPattern.TEARDOWN_START_ONE);
     }
     after(): tearDownOnce(){
         stackTrace--;
-        considerFlushBuffer();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method, LogPattern.TEARDOWN_FINISH_ONE);
+        logDebug(thisJoinPointStaticPart, LogPattern.TEARDOWN_FINISH_ONE);
     }
 
 
     before(): tearDownAll(){
         stackTrace++;
-        considerUnFlushImmediate();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method, LogPattern.TEARDOWN_START_ALL);
+        logDebug(thisJoinPointStaticPart, LogPattern.TEARDOWN_START_ALL);
     }
     after(): tearDownAll(){
         stackTrace--;
-        considerFlushBuffer();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method, LogPattern.TEARDOWN_FINISH_ALL);
-        logDebug(method, LogPattern.TEST_FINISH);
+        logDebug(thisJoinPointStaticPart, LogPattern.TEARDOWN_FINISH_ALL);
     }
 
     before(): ruleSetup(){
         stackTrace++;
-        considerUnFlushImmediate();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method,LogPattern.RULE_SETUP_START);
+        logDebug(thisJoinPointStaticPart,LogPattern.RULE_SETUP_START);
     }
     after(): ruleSetup(){
         stackTrace--;
-        considerFlushBuffer();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method,LogPattern.RULE_SETUP_FINISH);
+        logDebug(thisJoinPointStaticPart,LogPattern.RULE_SETUP_FINISH);
     }
 
     before(): ruleTearDown(){
         stackTrace++;
-        considerUnFlushImmediate();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method,LogPattern.RULE_TEARDOWN_START);
+        logDebug(thisJoinPointStaticPart,LogPattern.RULE_TEARDOWN_START);
     }
     after(): ruleTearDown(){
-        stackTrace--;
-        considerFlushBuffer();
-        Method method = ((MethodSignature) thisJoinPointStaticPart.getSignature()).getMethod();
-        logDebug(method,LogPattern.RULE_TEARDOWN_FINISH);
+        logDebug(thisJoinPointStaticPart,LogPattern.RULE_TEARDOWN_FINISH);
     }
 
-    private void logExceptions(Throwable t, final JoinPoint point) {
-        final Method method = ((MethodSignature) point.getSignature()).getMethod();
-        String mName = method.getName();
-        String cName = method.getDeclaringClass().getSimpleName();
-        Object[] params = point.getArgs();
-        StringBuilder sb = new StringBuilder();
-        sb.append("Exception caught for [");
-        sb.append(cName);
-        sb.append(".");
-        sb.append(mName);
-        for (int i = 0; i < params.length; i++) {
-            Object param = params[i];
-
-            sb.append("  [Arg=").append(i);
-            if (param != null) {
-                String type = param.getClass().getSimpleName();
-
-                sb.append(", ").append(type);
-
-                // Handle Object Array (Policy Override)
-                if (param instanceof Object[]) {
-                    sb.append("=").append(Arrays.toString((Object[]) param));
-                } else {
-                    sb.append("=").append(param.toString());
-                }
-            } else {
-                sb.append(", null");
-            }
-            sb.append("]  ");
-        }
-        LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.EXCEPTION_LOG_MODE),sb.toString());
-    }
-    private void logDebug(Method method, String message){
+//    private void logExceptions(Throwable t, final JoinPoint point) {
+//        final Method method = ((MethodSignature) point.getSignature()).getMethod();
+//        String mName = method.getName();
+//        String cName = method.getDeclaringClass().getSimpleName();
+//        Object[] params = point.getArgs();
+//        StringBuilder sb = new StringBuilder();
+//        sb.append("Exception caught for [");
+//        sb.append(cName);
+//        sb.append(".");
+//        sb.append(mName);
+//        for (int i = 0; i < params.length; i++) {
+//            Object param = params[i];
+//
+//            sb.append("  [Arg=").append(i);
+//            if (param != null) {
+//                String type = param.getClass().getSimpleName();
+//
+//                sb.append(", ").append(type);
+//
+//                // Handle Object Array (Policy Override)
+//                if (param instanceof Object[]) {
+//                    sb.append("=").append(Arrays.toString((Object[]) param));
+//                } else {
+//                    sb.append("=").append(param.toString());
+//                }
+//            } else {
+//                sb.append(", null");
+//            }
+//            sb.append("]  ");
+//        }
+//        LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.EXCEPTION_LOG_MODE),sb.toString());
+//    }
+    private void logDebug(JoinPoint.StaticPart staticPart, String message) {
+        final MethodSignature signature = (MethodSignature) staticPart.getSignature();
+        final Method method = signature.getMethod();
         Thread t = Thread.currentThread();
 
         String mName = method.getName();
@@ -201,10 +171,7 @@ public aspect Interceptor {
         String params = String.join(LogPattern.PARAMS_DELIMITER,ar);
         LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.COMMAND_LOG_MODE), String.join(LogPattern.DELIMITER, message, mName, clazz.getName(), clazz.getSimpleName(),clazz.getCanonicalName(), clazz.getTypeName(),params,Long.toString(t.getId())));
     }
-    private void logDebug(String message){
-        Thread t = Thread.currentThread();
-        LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.COMMAND_LOG_MODE),String.join(LogPattern.DELIMITER, message,Long.toString(t.getId())));
-    }
+
     private static ArrayList<WriterAppender> getAllWriterAppender(Logger logger){
         ArrayList<WriterAppender> was = new ArrayList<>();
         for (Enumeration aps = logger.getAllAppenders(); aps.hasMoreElements(); ) {
@@ -216,21 +183,4 @@ public aspect Interceptor {
         return was;
     }
 
-    private void considerFlushBuffer(){
-        if (stackTrace == 0){
-            if (!flushNow) {
-                for (WriterAppender ap:writerAppenders)
-                    ap.setImmediateFlush(true);
-                flushNow = !flushNow;
-            }
-        }
-    }
-
-    private void considerUnFlushImmediate(){
-        if (flushNow) {
-            for (WriterAppender ap:writerAppenders)
-                ap.setImmediateFlush(false);
-            flushNow = !flushNow;
-        }
-    }
 }
