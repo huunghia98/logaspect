@@ -55,7 +55,7 @@
                 <configuration>
                     <complianceLevel>1.8</complianceLevel>
                     <source>1.8</source>
-                    <target>11</target>
+                    <target>1.8</target>
                     <showWeaveInfo>true</showWeaveInfo>
                     <verbose>true</verbose>
                     <Xlint>ignore</Xlint>
