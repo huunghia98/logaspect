@@ -47,7 +47,11 @@ public class ThreadLocalQueue<E> {
 	}
 
 	public synchronized int dequeue(@Nonnull E[] values, int offset, int length) {
-		assert offset >= 0 && length > 0 && offset + length < values.length;
+//		assert offset >= 0 && length > 0 && offset + length <= values.length;
+		if (offset < 0) throw new IllegalArgumentException("Offset cannot be negative.");
+		if (length <= 0) throw new IllegalArgumentException("Length cannot be zero or negative.");
+		if (offset + length > values.length) throw new IndexOutOfBoundsException("Output array index out of bound.");
+
 		Queue<E> current = this.current;
 		if (current == null) return 0;
 		int emptyOffset = offset, emptyLen = length;
@@ -128,7 +132,7 @@ public class ThreadLocalQueue<E> {
 		}
 
 		private int dequeue(@Nonnull E[] values, final int offset, final int length) {
-//		assert offset >= 0 && length > 0 && offset + length < values.length;
+//		assert offset >= 0 && length > 0 && offset + length <= values.length;
 			int index = offset, limit = offset + length;
 			while (index < limit && head.next != null) {
 				this.head = head.next;
