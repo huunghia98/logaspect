@@ -59,9 +59,6 @@ public class LogPattern {
 	public static final String SCOPE_ONE = "ONE";
 
 
-
-
-
 	private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 	private static final Path LOG_PATH = Paths.get(System.getProperty("logaspect.path", System.getProperty("user.dir")))
 			.resolve("logaspect_" + DATE_TIME_FORMATTER.format(LocalDateTime.now()) + ".log");
@@ -77,6 +74,6 @@ public class LogPattern {
 		final MethodSignature signature = (MethodSignature) staticPart.getSignature();
 		final Method method = signature.getMethod();
 		final Thread thread = Thread.currentThread();
-		LOGGER.log(String.join(LogPattern.DELIMITER, LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), message, method.toGenericString(), Long.toString(thread.getId())));
+		LOGGER.log(String.join(LogPattern.DELIMITER, LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), Long.toString(thread.getId()), message, method.toGenericString()));
 	}
 }
