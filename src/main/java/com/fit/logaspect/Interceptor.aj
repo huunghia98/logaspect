@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
 
 public aspect Interceptor {
 	private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
@@ -29,12 +28,14 @@ public aspect Interceptor {
 			&& !setUpOnce() && !setUpAll() && !running() && !tearDownOnce() && !tearDownAll()
 			&& !ruleSetup() && !ruleTearDown());
 
+	private pointcut staticInit(): (staticinitialization(*Test));
+
 	@Pointcut("execution(* org.junit.rules.ExternalResource+.before(..))")
-	public void ruleSetup() {
+	private void ruleSetup() {
 	}
 
 	@Pointcut("execution(* org.junit.rules.ExternalResource+.after(..))")
-	public void ruleTearDown() {
+	private void ruleTearDown() {
 	}
 
 	before(): traceMethods(){
@@ -43,9 +44,9 @@ public aspect Interceptor {
 	after(): traceMethods(){
 		logDebug(thisJoinPointStaticPart, LogPattern.METHOD_FINISH);
 	}
-	after() throwing (Throwable throwable): traceMethods(){
-		logExceptions(throwable, thisJoinPointStaticPart);
-	}
+//	after() throwing (Throwable throwable): traceMethods(){
+//		logExceptions(throwable, thisJoinPointStaticPart);
+//	}
 
 	before(): setUpAll(){
 		logDebug(thisJoinPointStaticPart, LogPattern.TEST_START);
@@ -69,7 +70,7 @@ public aspect Interceptor {
 		logDebug(thisJoinPointStaticPart, LogPattern.TEST_METHOD_FINISH);
 	}
 
-	before(): tearDownOnce(){
+	private before(): tearDownOnce(){
 		logDebug(thisJoinPointStaticPart, LogPattern.TEARDOWN_START_ONE);
 	}
 	after(): tearDownOnce(){
@@ -98,15 +99,16 @@ public aspect Interceptor {
 		logDebug(thisJoinPointStaticPart, LogPattern.RULE_TEARDOWN_FINISH);
 	}
 
-	private void logExceptions(@Nonnull Throwable throwable, @Nonnull JoinPoint.StaticPart staticPart) {
-		final MethodSignature signature = (MethodSignature) staticPart.getSignature();
-		final Method method = signature.getMethod();
-		LOGGER.log(String.join(LogPattern.DELIMITER, LogPattern.EXCEPTION_LOG_MODE, Long.toString(System.nanoTime()), throwable.toString(), method.toGenericString()));
-	}
+//	private void logExceptions(@Nonnull Throwable throwable, @Nonnull JoinPoint.StaticPart staticPart) {
+//		final MethodSignature signature = (MethodSignature) staticPart.getSignature();
+//		final Method method = signature.getMethod();
+//		LOGGER.log(String.join(LogPattern.DELIMITER, LogPattern.EXCEPTION_LOG_MODE, Long.toString(System.nanoTime()), method.toGenericString(), throwable.toString()));
+//	}
 
 	private void logDebug(@Nonnull JoinPoint.StaticPart staticPart, @Nonnull String message) {
 		final MethodSignature signature = (MethodSignature) staticPart.getSignature();
 		final Method method = signature.getMethod();
-		LOGGER.log(String.join(LogPattern.DELIMITER, LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), message, method.toGenericString()));
+		final Thread thread = Thread.currentThread();
+		LOGGER.log(String.join(LogPattern.DELIMITER, LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), message, method.toGenericString(), Long.toString(thread.getId())));
 	}
 }

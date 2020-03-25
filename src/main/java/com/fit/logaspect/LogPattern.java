@@ -1,17 +1,17 @@
 package com.fit.logaspect;
 
 public class LogPattern {
-	public static final String LOG4J_PATTERN = "%-5p||%m%n";
-
 	public static final String METHOD_START = "METHOD-START";
 	public static final String METHOD_FINISH = "METHOD-FINISH";
+
+	public static final String UNKNOWN_BLOCK_START = "UBS";
+	public static final String UNKNOWN_BLOCK_FINISH = "UBF";
 
 	// not separate Rule and ClassRule, combine to Rule only.
 	// a test class in log start
 	public static final String TEST_START = "TEST-START";
 	public static final String SETUP_START_ALL = "SETUP-START-ALL";
 	public static final String SETUP_FINISH_ALL = "SETUP-FINISH-ALL";
-
 
 	public static final String RULE_SETUP_START = "RULE_SETUP_START";
 	public static final String RULE_SETUP_FINISH = "RULE_SETUP_FINISH";
