@@ -1,4 +1,4 @@
-package mrmathami.logger.logger;
+package mrmathami.utils.logger;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedOutputStream;

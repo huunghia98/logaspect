@@ -1,6 +1,6 @@
 package com.fit.logaspect;
 
-import mrmathami.logger.logger.SimpleLogger;
+import mrmathami.utils.logger.SimpleLogger;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -18,24 +18,24 @@ public aspect Interceptor {
 			.resolve("logaspect_" + DATE_TIME_FORMATTER.format(LocalDateTime.now()) + ".log");
 	private static final SimpleLogger LOGGER = SimpleLogger.of(LOG_PATH);
 
-	private pointcut setUpAll(): (execution(@org.junit.BeforeClass * *(..)) || execution(@org.junit.jupiter.api.BeforeAll * *(..))) ;
-	private pointcut setUpOnce(): (execution(@org.junit.Before * *(..)) || execution(@org.junit.jupiter.api.BeforeEach * *(..)));
-	private pointcut running(): (execution(@org.junit.Test * *(..)) || execution(@org.junit.jupiter.api.Test * *(..)));
-	private pointcut tearDownOnce(): (execution(@org.junit.After * *(..)) || execution(@org.junit.jupiter.api.AfterEach * *(..)));
-	private pointcut tearDownAll(): (execution(@org.junit.AfterClass * *(..)) || execution(@org.junit.jupiter.api.AfterAll * *(..)));
-	private pointcut traceMethods(): (execution(* *(..)) && !cflow(within(Interceptor))
+	pointcut setUpAll(): (execution(@org.junit.BeforeClass * *(..)) || execution(@org.junit.jupiter.api.BeforeAll * *(..))) ;
+	pointcut setUpOnce(): (execution(@org.junit.Before * *(..)) || execution(@org.junit.jupiter.api.BeforeEach * *(..)));
+	pointcut running(): (execution(@org.junit.Test * *(..)) || execution(@org.junit.jupiter.api.Test * *(..)));
+	pointcut tearDownOnce(): (execution(@org.junit.After * *(..)) || execution(@org.junit.jupiter.api.AfterEach * *(..)));
+	pointcut tearDownAll(): (execution(@org.junit.AfterClass * *(..)) || execution(@org.junit.jupiter.api.AfterAll * *(..)));
+	pointcut traceMethods(): (execution(* *(..)) && !cflow(within(Interceptor))
 			&& !within(org.junit.rules.TestRule+) && !within(org.junit.rules.MethodRule+)
 			&& !setUpOnce() && !setUpAll() && !running() && !tearDownOnce() && !tearDownAll()
 			&& !ruleSetup() && !ruleTearDown());
 
-	private pointcut staticInit(): (staticinitialization(*Test));
+	pointcut staticInit(): (staticinitialization(*Test));
 
 	@Pointcut("execution(* org.junit.rules.ExternalResource+.before(..))")
-	private void ruleSetup() {
+	public void ruleSetup() {
 	}
 
 	@Pointcut("execution(* org.junit.rules.ExternalResource+.after(..))")
-	private void ruleTearDown() {
+	public void ruleTearDown() {
 	}
 
 	before(): traceMethods(){
@@ -70,7 +70,7 @@ public aspect Interceptor {
 		logDebug(thisJoinPointStaticPart, LogPattern.TEST_METHOD_FINISH);
 	}
 
-	private before(): tearDownOnce(){
+	before(): tearDownOnce(){
 		logDebug(thisJoinPointStaticPart, LogPattern.TEARDOWN_START_ONE);
 	}
 	after(): tearDownOnce(){
