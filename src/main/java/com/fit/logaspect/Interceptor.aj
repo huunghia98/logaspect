@@ -6,16 +6,15 @@ public aspect Interceptor {
 	pointcut running(): execution(@org.junit.Test * *(..)) || execution(@org.junit.jupiter.api.Test * *(..));
 	pointcut tearDownOnce(): execution(@org.junit.After * *(..)) || execution(@org.junit.jupiter.api.AfterEach * *(..));
 	pointcut tearDownAll(): execution(@org.junit.AfterClass * *(..)) || execution(@org.junit.jupiter.api.AfterAll * *(..));
-	pointcut traceMethods(): execution(* *(..));
-//	 && !cflow(within(Interceptor))
-//			&& !within(org.junit.rules.TestRule+) && !within(org.junit.rules.MethodRule+)
-//			&& !setUpOnce() && !setUpAll() && !running() && !tearDownOnce() && !tearDownAll()
-//			&& !ruleSetup() && !ruleTearDown();
+	pointcut traceMethods(): execution(* *(..)) && !cflow(within(com.fit.logaspect.Interceptor))
+			&& !within(org.junit.rules.TestRule+) && !within(org.junit.rules.MethodRule+)
+			&& !setUpOnce() && !setUpAll() && !running() && !tearDownOnce() && !tearDownAll()
+			&& !ruleSetup() && !ruleTearDown();
 
-	// Look red? Don't worry, IntelliJ f*cked up hard here. AJC compile it just fine.
+	// Look red? Don't worry, IntelliJ mess up hard here. AJC compile it just fine.
 	pointcut ruleSetup(): execution(* org.junit.rules.ExternalResource+.before(..));
 	pointcut ruleTearDown(): execution(* org.junit.rules.ExternalResource+.after(..));
-	pointcut staticInit(): staticinitialization(*);
+	pointcut staticInit(): staticinitialization(*) && !within(com.fit.logaspect.Interceptor);
 
 
 	before(): traceMethods() {
