@@ -7,6 +7,12 @@
 	<groupId>com.fit.logaspect</groupId>
 	<artifactId>logaspect</artifactId>
 	<version>1.0-SNAPSHOT</version>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+	</properties>
+
 	<dependencies>
 		<!--Basic annotation-->
 		<dependency>
@@ -33,15 +39,16 @@
 			<version>1.9.5</version>
 		</dependency>
 	</dependencies>
+
 	<build>
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.8.1</version>
 				<configuration>
-					<compilerVersion>11</compilerVersion>
-					<target>11</target>
-					<source>11</source>
+					<compilerVersion>1.8</compilerVersion>
+					<target>1.8</target>
+					<source>1.8</source>
 					<compilerArgs>
 						<arg>-Xlint:all,-processing</arg>
 					</compilerArgs>
@@ -54,13 +61,16 @@
 				<artifactId>aspectj-maven-plugin</artifactId>
 				<version>1.11</version>
 				<configuration>
-					<complianceLevel>11</complianceLevel>
-					<source>11</source>
-					<target>11</target>
+					<complianceLevel>1.8</complianceLevel>
+					<source>1.8</source>
+					<target>1.8</target>
 					<showWeaveInfo>true</showWeaveInfo>
 					<verbose>true</verbose>
 					<Xlint>ignore</Xlint>
 					<encoding>UTF-8</encoding>
+					<excludes>
+						<exclude>**/*.java</exclude>
+					</excludes>
 				</configuration>
 				<executions>
 					<execution>
@@ -75,12 +85,11 @@
 				<dependencies>
 					<dependency>
 						<groupId>org.aspectj</groupId>
-						<artifactId>aspectjtools</artifactId>
+						<artifactId>aspectjrt</artifactId>
 						<version>1.9.5</version>
 					</dependency>
 				</dependencies>
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
