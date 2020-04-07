@@ -3,6 +3,7 @@ package com.fit.logaspect;
 import mrmathami.utils.logger.SimpleLogger;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.Signature;
+import org.aspectj.lang.reflect.InitializerSignature;
 import org.aspectj.lang.reflect.MethodSignature;
 
 import javax.annotation.Nonnull;
@@ -11,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 
 public class LogPattern {
 	public static final String METHOD_START = "METHOD-START";
@@ -18,8 +20,6 @@ public class LogPattern {
 
 	// not separate Rule and ClassRule, combine to Rule only.
 	// a test class in log start
-	public static final String TEST_START = "TEST-START";
-	public static final String TEST_FINISH = "TEST-FINISH";
 
 	public static final String SETUP_START_ONE = "SETUP-START-ONE";
 	public static final String SETUP_FINISH_ONE = "SETUP-FINISH-ONE";
@@ -50,11 +50,14 @@ public class LogPattern {
 	public static final String COMMAND_LOG_MODE = "DEBUG";
 	public static final String EXCEPTION_LOG_MODE = "ERROR";
 	public static final String DELIMITER = "|";
+	public static final String PARAMS_DELIMITER = "-";
 
 
 	private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+//	private static final Path LOG_PATH = Paths.get(System.getProperty("logaspect.path", System.getProperty("user.dir")))
+//			.resolve("logaspect_" + DATE_TIME_FORMATTER.format(LocalDateTime.now()) + ".log");
 	private static final Path LOG_PATH = Paths.get(System.getProperty("logaspect.path", System.getProperty("user.dir")))
-			.resolve("logaspect_" + DATE_TIME_FORMATTER.format(LocalDateTime.now()) + ".log");
+			.resolve("logaspect" + ".log");
 	private static final SimpleLogger LOGGER = SimpleLogger.of(LOG_PATH);
 
 //	static void logExceptions(@Nonnull Throwable throwable, @Nonnull JoinPoint.StaticPart staticPart) {
@@ -66,6 +69,25 @@ public class LogPattern {
 	static void logDebug(@Nonnull JoinPoint.StaticPart staticPart, @Nonnull String message) {
 		final Thread thread = Thread.currentThread();
 		final Signature signature = staticPart.getSignature();
-		LOGGER.log(String.join(LogPattern.DELIMITER, LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), Long.toString(thread.getId()), message, signature.toLongString()));
+		Class clazz = signature.getDeclaringType();
+		if (signature instanceof MethodSignature){
+			MethodSignature methodSignature = (MethodSignature) signature;
+			Method method = methodSignature.getMethod();
+			ArrayList<String> ar = new ArrayList<>();
+			for (Class cl : method.getParameterTypes()){
+				ar.add(cl.getTypeName());
+			}
+			String params = String.join(PARAMS_DELIMITER,ar);
+			LOGGER.log(String.join(LogPattern.DELIMITER,
+					LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), Long.toString(thread.getId()),
+					message, method.getName(), params,clazz.getName(), clazz.getSimpleName(), clazz.getCanonicalName(), clazz.getTypeName()));
+
+		} else if (signature instanceof InitializerSignature){
+//			InitializerSignature initializerSignature = (InitializerSignature) signature;
+			LOGGER.log(String.join(LogPattern.DELIMITER,
+					LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), Long.toString(thread.getId()),
+					message, "", "", clazz.getName(), clazz.getSimpleName(), clazz.getCanonicalName(), clazz.getTypeName()));
+
+		}
 	}
 }

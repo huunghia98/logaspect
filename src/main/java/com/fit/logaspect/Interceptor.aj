@@ -14,7 +14,7 @@ public aspect Interceptor {
 	// Look red? Don't worry, IntelliJ mess up hard here. AJC compile it just fine.
 	pointcut ruleSetup(): execution(* org.junit.rules.ExternalResource+.before(..));
 	pointcut ruleTearDown(): execution(* org.junit.rules.ExternalResource+.after(..));
-	pointcut staticInit(): staticinitialization(*) && !within(com.fit.logaspect.Interceptor);
+	pointcut staticInit(): (staticinitialization(*Test) || staticinitialization(*..*Test) || staticinitialization(*..Test*) || staticinitialization(Test*)) && !within(com.fit.logaspect.Interceptor);
 
 
 	before(): traceMethods() {
@@ -28,7 +28,6 @@ public aspect Interceptor {
 //	}
 
 	before(): setUpAll(){
-		LogPattern.logDebug(thisJoinPointStaticPart, LogPattern.TEST_START);
 		LogPattern.logDebug(thisJoinPointStaticPart, LogPattern.SETUP_START_ALL);
 	}
 	after(): setUpAll(){
@@ -61,7 +60,6 @@ public aspect Interceptor {
 	}
 	after(): tearDownAll(){
 		LogPattern.logDebug(thisJoinPointStaticPart, LogPattern.TEARDOWN_FINISH_ALL);
-		LogPattern.logDebug(thisJoinPointStaticPart, LogPattern.TEST_FINISH);
 	}
 
 	before(): ruleSetup(){
