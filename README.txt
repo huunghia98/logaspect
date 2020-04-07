@@ -15,4 +15,4 @@ log4j.appender.interceptor.bufferedIO=true
 log4j.appender.interceptor.bufferSize=200KB
 log4j.appender.batchLogInterceptor.File=./test.log
 log4j.appender.batchLogInterceptor.layout=org.apache.log4j.PatternLayout
-log4j.appender.batchLogInterceptor.layout.ConversionPattern=%-5p||%m%n
+log4j.appender.batchLogInterceptor.layout.ConversionPattern=%m%n
