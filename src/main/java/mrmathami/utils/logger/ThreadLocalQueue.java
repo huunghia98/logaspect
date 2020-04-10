@@ -3,11 +3,16 @@ package mrmathami.utils.logger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ThreadLocalQueue<E> {
+	@Nonnull private final ThreadLocal<Queue<E>> threadLocal = ThreadLocal.withInitial(this::createQueue);
+	@Nonnull private final AtomicInteger tailIndex = new AtomicInteger();
+
 	private final int limit;
 	@Nullable private Queue<E> current = null;
-	@Nonnull private final ThreadLocal<Queue<E>> threadLocal = ThreadLocal.withInitial(this::createQueue);
+
+	private int headIndex = 0;
 	private int cleanCount = 0;
 
 	public ThreadLocalQueue(int limit) {
@@ -27,23 +32,44 @@ public class ThreadLocalQueue<E> {
 		}
 	}
 
+	private static <E> boolean cleanUp(@Nonnull Queue<E> current, @Nonnull Queue<E> next, @Nonnull Thread thread) {
+		if (thread.isAlive()) return false;
+		assert current != next;
+		final Queue<E> prev = current.prev;
+		next.prev = prev;
+		prev.next = next;
+		return true;
+	}
+
 	public boolean enqueue(@Nonnull E value) {
-		return threadLocal.get().enqueue(value);
+		return threadLocal.get().enqueue(tailIndex, value);
 	}
 
 	@Nullable
 	public synchronized E dequeue() {
 		Queue<E> current = this.current;
 		if (current == null) return null;
-		final Queue<E> mask = current;
-		do {
-			final E value = current.dequeue();
+
+		final int tail = tailIndex.get();
+		final int head = headIndex;
+		if (head == tail) return null; // empty
+
+		while (true) {
+			final E value = current.dequeue(head);
 			if (value != null) {
+				this.headIndex += 1;
 				this.current = current;
 				return value;
 			}
-		} while ((current = current.next) != mask);
-		return null;
+
+			// clean up
+			final Queue<E> next = current.next;
+			final Thread thread;
+			if ((thread = current.get()) == null || ++cleanCount == 257 && cleanUp(current, next, thread)) {
+				this.cleanCount = 0;
+			}
+			current = next;
+		}
 	}
 
 	public synchronized int dequeue(@Nonnull E[] values, int offset, int length) {
@@ -54,46 +80,38 @@ public class ThreadLocalQueue<E> {
 
 		Queue<E> current = this.current;
 		if (current == null) return 0;
-		int emptyOffset = offset, emptyLen = length;
-		Queue<E> marker = current;
-		do {
-			final Queue<E> next = current.next;
-			final int pollSize = current.dequeue(values, emptyOffset, emptyLen);
-			if (pollSize > 0) {
-				emptyOffset += pollSize;
-				emptyLen -= pollSize;
-				if (emptyLen == 0) break;
-			} else if (current == marker) {
-				final Thread thread = current.get();
-				if (thread == null || (cleanCount++ & 0xFF) == 0 && !thread.isAlive()) {
-					if (current != next) {
-						final Queue<E> prev = current.prev;
-						next.prev = prev;
-						prev.next = next;
-						marker = next;
-					} else {
-						current = null;
-						break;
-					}
+
+		final int tail = tailIndex.get();
+		final int head = headIndex;
+		if (head == tail) return 0; // empty
+
+		final int size = Math.min(tail - head, length);
+		int count = 0;
+		while (true) {
+			final int dequeue = current.dequeue(values, offset, head, size);
+			if (dequeue > 0) {
+				count += dequeue;
+				assert count <= dequeue;
+				current = current.next;
+				if (count == size) {
+					this.headIndex += size;
+					this.current = current;
+					return size;
 				}
+			} else {
+				// clean up
+				final Queue<E> next = current.next;
+				final Thread thread;
+				if ((thread = current.get()) == null || ++cleanCount == 257 && cleanUp(current, next, thread)) {
+					this.cleanCount = 0;
+				}
+				current = next;
 			}
-			current = next;
-		} while (current != marker);
-		this.current = current;
-		return length - emptyLen;
+		}
 	}
 
 	public synchronized boolean isEmpty() {
-		Queue<E> current = this.current;
-		if (current == null) return true;
-		final Queue<E> mask = current;
-		do {
-			if (!current.isEmpty()) {
-				this.current = current;
-				return false;
-			}
-		} while ((current = current.next) != mask);
-		return true;
+		return current == null || headIndex == tailIndex.get();
 	}
 
 	private static final class Queue<E> extends WeakReference<Thread> {
@@ -107,7 +125,7 @@ public class ThreadLocalQueue<E> {
 			super(thread);
 			this.limit = limit;
 			this.next = this.prev = this;
-			this.head = this.tail = new Node<>(0, null); // initial blank node
+			this.head = this.tail = new Node<>(0, 0, null); // initial blank node
 		}
 
 		private Queue(int limit, @Nonnull Thread thread, @Nonnull Queue<E> next, @Nonnull Queue<E> prev) {
@@ -115,56 +133,48 @@ public class ThreadLocalQueue<E> {
 			this.limit = limit;
 			this.next = next;
 			this.prev = prev;
-			this.head = this.tail = new Node<>(0, null); // initial blank node
+			this.head = this.tail = new Node<>(0, 0, null); // initial blank node
 		}
 
-		private boolean enqueue(@Nonnull E value) {
+		private boolean enqueue(@Nonnull AtomicInteger tailIndex, @Nonnull E value) {
 			if (tail.count - head.count >= limit) return false;
-			this.tail = tail.next = new Node<>(tail.count + 1, value);
+			this.tail = tail.next = new Node<>(tailIndex.getAndIncrement(), tail.count + 1, value);
 			return true;
 		}
 
 		@Nullable
-		private E dequeue() {
-			if (head.next == null) return null;
-			this.head = head.next;
-			return head.value;
+		private E dequeue(int headIndex) {
+			final Node<E> next;
+			if ((next = head.next) == null || next.index != headIndex) return null;
+			this.head = next;
+			return next.value;
 		}
 
-		private int dequeue(@Nonnull E[] values, final int offset, final int length) {
-//		assert offset >= 0 && length > 0 && offset + length <= values.length;
-			int index = offset, limit = offset + length;
-			while (index < limit && head.next != null) {
-				this.head = head.next;
-				values[index++] = head.value;
+		private int dequeue(@Nonnull E[] values, int offset, int headIndex, int size) {
+			int count = 0;
+			Node<E> head = this.head, next;
+			while ((next = head.next) != null) {
+				final int index = next.index - headIndex;
+				if (index >= size) break;
+				values[offset + index] = next.value;
+				head = next;
+				count += 1;
 			}
-			return index - offset;
-		}
-
-		private boolean isEmpty() {
-			return head.next == null;
+			this.head = head;
+			return count;
 		}
 	}
 
 	private static final class Node<E> {
+		private final int index;
 		private final int count;
 		@Nullable private final E value;
 		@Nullable private Node<E> next;
 
-		private Node(int count, @Nullable E value) {
+		private Node(int index, int count, @Nullable E value) {
+			this.index = index;
 			this.count = count;
 			this.value = value;
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
