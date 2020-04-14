@@ -5,12 +5,16 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.WriterAppender;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.Signature;
+import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.InitializerSignature;
 import org.aspectj.lang.reflect.MethodSignature;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.regex.Pattern;
 
 public aspect Interceptor {
     static {
@@ -20,7 +24,7 @@ public aspect Interceptor {
                 for (WriterAppender ap:writerAppenders)
                     ap.setImmediateFlush(true);
                 // important
-                LOGGER.info("Flush-end-of-log");
+                LOGGER.info("INFO |Flush-end-of-log");
             }
         });
     }
@@ -30,7 +34,9 @@ public aspect Interceptor {
     pointcut running(): execution(@org.junit.Test * *(..)) || execution(@org.junit.jupiter.api.Test * *(..));
     pointcut tearDownOnce(): execution(@org.junit.After * *(..)) || execution(@org.junit.jupiter.api.AfterEach * *(..));
     pointcut tearDownAll(): execution(@org.junit.AfterClass * *(..)) || execution(@org.junit.jupiter.api.AfterAll * *(..));
-    pointcut traceMethods(): execution(* *(..)) && !cflow(within(com.fit.logaspect.Interceptor))
+    pointcut traceMethods(): (execution(* *(..))||execution(*.new(..)))
+            && !execution(*Test.new(..)) && !execution(Test*.new(..)) && !execution(*..*Test.new(..)) && !execution(*..Test*.new(..))
+            && !cflow(within(com.fit.logaspect.Interceptor))
             && !within(org.junit.rules.TestRule+) && !within(org.junit.rules.MethodRule+)
             && !setUpOnce() && !setUpAll() && !running() && !tearDownOnce() && !tearDownAll()
             && !ruleSetup() && !ruleTearDown();
@@ -125,10 +131,7 @@ public aspect Interceptor {
             MethodSignature methodSignature = (MethodSignature) signature;
             Method method = methodSignature.getMethod();
             ArrayList<String> ar = new ArrayList<>();
-            for (Class cl : method.getParameterTypes()){
-                ar.add(cl.getTypeName());
-            }
-            String params = String.join(LogPattern.PARAMS_DELIMITER,ar);
+            String params = getParamsString(method);
             LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.COMMAND_LOG_MODE),String.join(LogPattern.DELIMITER,
                     LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), Long.toString(thread.getId()),
                     message, method.getName(), params,clazz.getName(), clazz.getCanonicalName()));
@@ -139,6 +142,34 @@ public aspect Interceptor {
                     LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), Long.toString(thread.getId()),
                     message, "", "", clazz.getName(), clazz.getCanonicalName()));
 
+        } else if (signature instanceof ConstructorSignature){
+            Constructor constructor = ((ConstructorSignature) signature).getConstructor();
+            String params =getParamsString(constructor);
+            LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.COMMAND_LOG_MODE),String.join(LogPattern.DELIMITER,
+                    LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), Long.toString(thread.getId()),
+                    message, getSimpleName(constructor.getName()), params, clazz.getName(), clazz.getCanonicalName()));
         }
+    }
+
+    private static String getParamsString(Executable ex){
+        ArrayList<String> ar = new ArrayList<>();
+        for (Class cl : ex.getParameterTypes()){
+            ar.add(cl.getTypeName());
+        }
+        String params = String.join(LogPattern.PARAMS_DELIMITER,ar);
+        return params;
+    }
+    private static String getSimpleName(String s){
+        String[] tmp = s.split(Pattern.quote("$"));
+        String temp = s;
+        if (s.contains("$")){
+            tmp = s.split(Pattern.quote("$"));
+            temp = tmp[tmp.length-1];
+        }
+        if (temp.contains(".")){
+            tmp = temp.split(Pattern.quote("."));
+            temp = tmp[tmp.length-1];
+        }
+        return temp;
     }
 }
