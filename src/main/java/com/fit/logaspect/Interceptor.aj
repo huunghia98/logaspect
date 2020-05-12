@@ -17,18 +17,25 @@ import java.util.Enumeration;
 import java.util.regex.Pattern;
 
 public aspect Interceptor {
+    public static Logger LOGGER = Logger.getLogger(com.fit.logaspect.Interceptor.class.getName());;
+
     static {
+        // support manual test
+        String testName = System.getProperty("nameTest");
+        if (testName != null)
+            LOGGER.trace(testName);
+
+        // add shutdown hook for pushing buffer
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 ArrayList<WriterAppender> writerAppenders = getAllWriterAppender(LOGGER);
                 for (WriterAppender ap:writerAppenders)
                     ap.setImmediateFlush(true);
                 // important
-                LOGGER.info("INFO |Flush-end-of-log");
+                LOGGER.info("Flush-end-of-log");
             }
         });
     }
-    public static Logger LOGGER = Logger.getLogger(com.fit.logaspect.Interceptor.class.getName());
     pointcut setUpAll(): execution(@org.junit.BeforeClass * *(..)) || execution(@org.junit.jupiter.api.BeforeAll * *(..));
     pointcut setUpOnce(): execution(@org.junit.Before * *(..)) || execution(@org.junit.jupiter.api.BeforeEach * *(..));
     pointcut running(): execution(@org.junit.Test * *(..)) || execution(@org.junit.jupiter.api.Test * *(..));
@@ -44,7 +51,8 @@ public aspect Interceptor {
     // Look red? Don't worry, IntelliJ mess up hard here. AJC compile it just fine.
     pointcut ruleSetup(): execution(* org.junit.rules.ExternalResource+.before(..));
     pointcut ruleTearDown(): execution(* org.junit.rules.ExternalResource+.after(..));
-    pointcut staticInit(): (staticinitialization(*Test) || staticinitialization(*..*Test) || staticinitialization(*..Test*) || staticinitialization(Test*)) && !within(com.fit.logaspect.Interceptor);
+    pointcut staticInit(): (staticinitialization(*Test) || staticinitialization(*..*Test) || staticinitialization(*..Test*) || staticinitialization(Test*))
+            && !within(com.fit.logaspect.Interceptor);
 
 
     before(): traceMethods() {
@@ -133,20 +141,20 @@ public aspect Interceptor {
             ArrayList<String> ar = new ArrayList<>();
             String params = getParamsString(method);
             LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.COMMAND_LOG_MODE),String.join(LogPattern.DELIMITER,
-                    LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), Long.toString(thread.getId()),
+                    Long.toString(System.nanoTime()), Long.toString(thread.getId()),
                     message, method.getName(), params,clazz.getName(), clazz.getCanonicalName()));
 
         } else if (signature instanceof InitializerSignature){
 //			InitializerSignature initializerSignature = (InitializerSignature) signature;
             LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.COMMAND_LOG_MODE),String.join(LogPattern.DELIMITER,
-                    LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), Long.toString(thread.getId()),
+                    Long.toString(System.nanoTime()), Long.toString(thread.getId()),
                     message, "", "", clazz.getName(), clazz.getCanonicalName()));
 
         } else if (signature instanceof ConstructorSignature){
             Constructor constructor = ((ConstructorSignature) signature).getConstructor();
             String params =getParamsString(constructor);
             LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.COMMAND_LOG_MODE),String.join(LogPattern.DELIMITER,
-                    LogPattern.COMMAND_LOG_MODE, Long.toString(System.nanoTime()), Long.toString(thread.getId()),
+                    Long.toString(System.nanoTime()), Long.toString(thread.getId()),
                     message, getSimpleName(constructor.getName()), params, clazz.getName(), clazz.getCanonicalName()));
         }
     }
