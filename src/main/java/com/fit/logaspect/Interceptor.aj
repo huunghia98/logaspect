@@ -23,7 +23,7 @@ public aspect Interceptor {
         // support manual test
         String testName = System.getProperty("nameTest");
         if (testName != null)
-            LOGGER.trace(testName);
+            LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.MANUAL_TEST_MODE), "START-MANUAL:"+ testName);
 
         // add shutdown hook for pushing buffer
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -31,6 +31,8 @@ public aspect Interceptor {
                 ArrayList<WriterAppender> writerAppenders = getAllWriterAppender(LOGGER);
                 for (WriterAppender ap:writerAppenders)
                     ap.setImmediateFlush(true);
+                if (testName != null)
+                    LOGGER.log(org.apache.log4j.Level.toLevel(LogPattern.MANUAL_TEST_MODE), "FINISH-MANUAL:"+ testName);
                 // important
                 LOGGER.info("Flush-end-of-log");
             }

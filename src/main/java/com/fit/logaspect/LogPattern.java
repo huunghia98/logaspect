@@ -50,5 +50,6 @@ public class LogPattern {
     public static final String EXCEPTION_LOG_MODE = "ERROR";
     public static final String DELIMITER = "|";
     public static final String PARAMS_DELIMITER = "-";
+    public static final String MANUAL_TEST_MODE = "TRACE";
 
 }
