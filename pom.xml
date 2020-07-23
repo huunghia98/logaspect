@@ -20,7 +20,7 @@
         <version>4.12</version>
         <scope>test</scope>
     </dependency>
-    <!--        setup for log test -->
+    <!-- setup for log test -->
     <dependency>
         <groupId>org.aspectj</groupId>
         <artifactId>aspectjrt</artifactId>
@@ -61,6 +61,9 @@
                 <verbose>true</verbose>
                 <Xlint>ignore</Xlint>
                 <encoding>UTF-8 </encoding>
+                <excludes>
+                    <exclude>**/*.java</exclude>
+                </excludes>
             </configuration>
             <executions>
                 <execution>

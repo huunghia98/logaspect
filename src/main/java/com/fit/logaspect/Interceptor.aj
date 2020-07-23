@@ -43,8 +43,7 @@ public aspect Interceptor {
     pointcut running(): execution(@org.junit.Test * *(..)) || execution(@org.junit.jupiter.api.Test * *(..));
     pointcut tearDownOnce(): execution(@org.junit.After * *(..)) || execution(@org.junit.jupiter.api.AfterEach * *(..));
     pointcut tearDownAll(): execution(@org.junit.AfterClass * *(..)) || execution(@org.junit.jupiter.api.AfterAll * *(..));
-    pointcut traceMethods(): (execution(* *(..))||execution(*.new(..)))
-            && !execution(*Test.new(..)) && !execution(Test*.new(..)) && !execution(*..*Test.new(..)) && !execution(*..Test*.new(..))
+    pointcut traceMethods(): (execution(* *(..)) || execution(*.new(..)))
             && !cflow(within(com.fit.logaspect.Interceptor))
             && !within(org.junit.rules.TestRule+) && !within(org.junit.rules.MethodRule+)
             && !setUpOnce() && !setUpAll() && !running() && !tearDownOnce() && !tearDownAll()
@@ -53,8 +52,7 @@ public aspect Interceptor {
     // Look red? Don't worry, IntelliJ mess up hard here. AJC compile it just fine.
     pointcut ruleSetup(): execution(* org.junit.rules.ExternalResource+.before(..));
     pointcut ruleTearDown(): execution(* org.junit.rules.ExternalResource+.after(..));
-    pointcut staticInit(): (staticinitialization(*Test) || staticinitialization(*..*Test) || staticinitialization(*..Test*) || staticinitialization(Test*))
-            && !within(com.fit.logaspect.Interceptor);
+    pointcut staticInit(): staticinitialization(*) && !within(com.fit.logaspect.Interceptor);
 
 
     before(): traceMethods() {
